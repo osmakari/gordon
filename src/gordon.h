@@ -20,6 +20,7 @@ struct gfile {
     char *path;
     char *data;
     size_t size;
+    size_t allocated;
 
     size_t cursor_pos;
     size_t screen_top;

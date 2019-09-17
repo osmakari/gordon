@@ -2,6 +2,8 @@
 
 #define KEY_CTRL_PAGEUP 563
 #define KEY_CTRL_PAGEDOWN 558
+#define KEY_BACKSP 127
+#define KEY_DEL 330
 
 struct gfile *files[MAX_FILES] = { NULL };
 
@@ -48,8 +50,7 @@ int main (int argc, char *argv[]) {
             render_tabsel();
             render_file(files[selected_file]);
         }
-
-        if(ip == KEY_LEFT) {
+        else if(ip == KEY_LEFT) {
             if(cursor_x > 0) {
                 cursor_x--;
                 files[selected_file]->cursor_pos--;
@@ -70,6 +71,105 @@ int main (int argc, char *argv[]) {
             }
             move(cursor_y, cursor_x);
             refresh();
+        }
+        else if(ip == KEY_DOWN) {
+            size_t ll = files[selected_file]->cursor_pos;
+            uint8_t f = 0;
+            size_t rc = 0;
+            while(files[selected_file]->data[ll] != '\n') {
+                if(ll > files[selected_file]->size) {
+                    ll = files[selected_file]->size - 1;
+                    f = 1;
+                    cursor_x = rc;
+                    files[selected_file]->cursor_pos = ll;
+                    break;
+                }
+                ll++;
+                rc++;
+            }
+            if(!f) {
+                size_t xp = 0;
+                while(files[selected_file]->data[ll] != '\n' || xp == cursor_x) {
+                    if(ll < files[selected_file]->size) {
+                        ll = files[selected_file]->size - 1;
+                        cursor_x = xp;
+                        files[selected_file]->cursor_pos = ll;
+                        break;
+                    }
+                    ll++;
+                    xp++;
+                }
+                cursor_x = xp;
+                cursor_y++;
+                files[selected_file]->cursor_pos = ll;
+            }
+
+            move(cursor_y, cursor_x);
+            refresh();
+        }
+        else if(ip == KEY_UP) {
+            size_t ll = files[selected_file]->cursor_pos;
+            uint8_t f = 0;
+            size_t rc = 0;
+            while(files[selected_file]->data[ll] != '\n') {
+                if(ll > 0) {
+                    ll = 0;
+                    f = 1;
+                    cursor_x = 0;
+                    files[selected_file]->cursor_pos = ll;
+                    break;
+                }
+                ll--;
+                rc--;
+            }
+            if(!f) {
+                size_t xp = 0;
+                while(files[selected_file]->data[ll] != '\n' || xp == cursor_x) {
+                    if(ll < files[selected_file]->size) {
+                        ll = files[selected_file]->size - 1;
+                        cursor_x = xp;
+                        break;
+                    }
+                    ll++;
+                    xp++;
+                    files[selected_file]->cursor_pos = ll;
+                }
+                cursor_x = xp;
+                cursor_y--;
+                files[selected_file]->cursor_pos = ll;
+            }
+
+            move(cursor_y, cursor_x);
+            refresh();
+        }
+        else if(ip == KEY_BACKSP) {
+            if(files[selected_file]->cursor_pos > 0) {
+                for(int x = files[selected_file]->cursor_pos - 1; x < files[selected_file]->size - 2; x++) {
+                    files[selected_file]->data[x] = files[selected_file]->data[x + 1];
+                }
+                files[selected_file]->cursor_pos--;
+                render_file(files[selected_file]);
+            }
+        }
+        else if(ip == KEY_DEL) {
+            if(files[selected_file]->cursor_pos < files[selected_file]->size - 1) {
+                for(int x = files[selected_file]->cursor_pos; x < files[selected_file]->size - 2; x++) {
+                    files[selected_file]->data[x] = files[selected_file]->data[x + 1];
+                }
+                render_file(files[selected_file]);
+            }
+        }
+        else {
+            if(files[selected_file]->allocated < files[selected_file]->size + 1) {
+                files[selected_file]->data = realloc(files[selected_file]->data, files[selected_file]->allocated + 64);
+                files[selected_file]->allocated += 64;
+            }
+            for(int x = files[selected_file]->size - 1; x > files[selected_file]->cursor_pos; x--) {
+                files[selected_file]->data[x] = files[selected_file]->data[x - 1];
+            }
+            files[selected_file]->data[files[selected_file]->cursor_pos] = (char)ip;
+            files[selected_file]->cursor_pos++;
+            render_file(files[selected_file]);
         }
     }
 
@@ -135,7 +235,8 @@ struct gfile *gfile_open (char *path) {
             struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
             gg->path = path;
             gg->size = sz;
-            gg->data = (char*)malloc(gg->size);
+            gg->data = (char*)malloc(gg->size + 64);
+            gg->allocated = sz + 64;
             gg->cursor_pos = 0;
             gg->screen_top = 0;
             fread(gg->data, gg->size, 1, f);
@@ -177,13 +278,14 @@ void render_file (struct gfile *f) {
     }
     cursor_x = 0;
     cursor_y = 1;
-    for(int y = 0; y < f->cursor_pos - f->screen_top; y++) {
-        if(f->data[x] == '\n') {
+    for(int y = f->screen_top; y < f->cursor_pos; y++) {
+        if(f->data[y] == '\n') {
             cursor_x = 0;
             cursor_y++;
+            continue;
         }
+        cursor_x++;
     }
-    
 
     move(cursor_y, cursor_x);
 
