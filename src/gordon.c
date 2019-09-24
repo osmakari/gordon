@@ -13,6 +13,8 @@ uint16_t cursor_y = 0;
 
 int selected_file = 0;
 
+uint8_t mode = 0; // 0 = insert, 1 = command, 2 = buttondebug
+
 int main (int argc, char *argv[]) {
     initscr();
     cbreak();
@@ -24,6 +26,7 @@ int main (int argc, char *argv[]) {
     init_pair(1, COLOR_WHITE, COLOR_BLACK);
     init_pair(2, COLOR_BLACK, COLOR_CYAN);
     init_pair(3, COLOR_BLACK, COLOR_MAGENTA);
+    init_pair(4, COLOR_BLACK, COLOR_WHITE);
 
     getmaxyx(stdscr, SCREEN_HEIGHT, SCREEN_WIDTH);
     clear();
@@ -37,6 +40,9 @@ int main (int argc, char *argv[]) {
         if(swi == 0) {
             if(argv[x][0] == '-') {
                 // arg
+                if(argv[x][1] == 'b') {
+                    mode = 2;
+                }
             }
             else {
                 // Open file
@@ -46,162 +52,220 @@ int main (int argc, char *argv[]) {
         
     }
 
+    char cbuf[1024] = { 0 };
+    int16_t cbufp = 0;
+
 
     while(1) {
         int ip = getch();
-        if(ip == KEY_CTRL_PAGEUP) {
-            if(selected_file < MAX_FILES && files[selected_file + 1] != NULL) {
-                selected_file++;
-            }
-            render_tabsel();
-            render_file(files[selected_file]);
+        if(mode == 2) {
+            printw("%i", ip);
+            continue;
         }
-        else if(ip == KEY_CTRL_PAGEDOWN) {
-            if(selected_file > 0 && files[selected_file - 1] != NULL) {
-                selected_file--;
+
+        if(ip == 27) {
+            mode = (mode == 1 ? 0 : 1);
+            if(mode == 1) {
+                // Render command line
+                render_commandline();
+                memset(cbuf, 0, 1024);
             }
-            render_tabsel();
-            render_file(files[selected_file]);
+            else if(mode == 0) {
+                clear();
+                render_tabsel();
+                render_file(files[selected_file]);
+            }
+            continue;
         }
-        else if(ip == KEY_LEFT) {
-            if(cursor_x > 0) {
-                //cursor_x--;
-                files[selected_file]->cursor_pos--;
-            }
-            //move(cursor_y, cursor_x);
-            //refresh();
-            render_file(files[selected_file]);
-        }
-        else if(ip == KEY_RIGHT) {
-            uint16_t ll = 0;
-            while(files[selected_file]->data[files[selected_file]->cursor_pos + ll] != '\n' && 
-                    files[selected_file]->data[files[selected_file]->cursor_pos + ll] != 0) {
-                
-                ll++;
-            }
-            if(ll > 0) {
-                //cursor_x++;
-                files[selected_file]->cursor_pos++;
-            }
-            //move(cursor_y, cursor_x);
-            //refresh();
-            render_file(files[selected_file]);
-        }
-        else if(ip == KEY_DOWN) {
-            size_t ll = files[selected_file]->cursor_pos;
-            uint8_t f = 0;
-            size_t rc = 0;
-            while(files[selected_file]->data[ll] != '\n') {
-                if(ll > files[selected_file]->size) {
-                    ll = files[selected_file]->size - 1;
-                    f = 1;
-                    //cursor_x = rc;
-                    files[selected_file]->cursor_pos = ll;
-                    break;
+        
+        if(mode == 0) {
+            if(ip == KEY_CTRL_PAGEUP) {
+                if(selected_file < MAX_FILES && files[selected_file + 1] != NULL) {
+                    selected_file++;
                 }
-                ll++;
-                rc++;
+                render_tabsel();
+                render_file(files[selected_file]);
             }
-            if(!f) {
-                ll++;
-                size_t xp = 0;
-                while(files[selected_file]->data[ll] != '\n' && xp != cursor_x) {
+            else if(ip == KEY_CTRL_PAGEDOWN) {
+                if(selected_file > 0 && files[selected_file - 1] != NULL) {
+                    selected_file--;
+                }
+                render_tabsel();
+                render_file(files[selected_file]);
+            }
+            else if(ip == KEY_LEFT) {
+                if(files[selected_file]->cursor_pos > 0) {
+                    //cursor_x--;
+                    files[selected_file]->cursor_pos--;
+                }
+                //move(cursor_y, cursor_x);
+                //refresh();
+                render_file(files[selected_file]);
+            }
+            else if(ip == KEY_RIGHT) {
+                if(files[selected_file]->data[files[selected_file]->cursor_pos] != 0 && files[selected_file]->cursor_pos < files[selected_file]->size) {
+                    files[selected_file]->cursor_pos++;
+                }
+                //move(cursor_y, cursor_x);
+                //refresh();
+                render_file(files[selected_file]);
+            }
+            else if(ip == KEY_DOWN) {
+                size_t ll = files[selected_file]->cursor_pos;
+                uint8_t f = 0;
+                size_t rc = 0;
+                while(files[selected_file]->data[ll] != '\n') {
                     if(ll > files[selected_file]->size) {
-                        ll = files[selected_file]->size - 1;
-                        //cursor_x = xp;
+                        ll = files[selected_file]->size;
+                        f = 1;
+                        //cursor_x = rc;
                         files[selected_file]->cursor_pos = ll;
                         break;
                     }
                     ll++;
-                    xp++;
+                    rc++;
                 }
-                //cursor_x = xp;
-                //cursor_y++;
-                files[selected_file]->cursor_pos = ll;
-            }
-
-            //move(cursor_y, cursor_x);
-            //refresh();
-            render_file(files[selected_file]);
-        }
-        else if(ip == KEY_UP) {
-            size_t ll = files[selected_file]->cursor_pos - 1;
-            uint8_t f = 0;
-            while(files[selected_file]->data[ll] != '\n') {
-                if(ll < 0) {
-                    ll = 0;
-                    f = 1;
-                    //cursor_x = 0;
+                if(!f) {
+                    ll++;
+                    size_t xp = 0;
+                    while(files[selected_file]->data[ll] != '\n' && xp != cursor_x) {
+                        if(ll > files[selected_file]->size) {
+                            ll = files[selected_file]->size - 1;
+                            //cursor_x = xp;
+                            files[selected_file]->cursor_pos = ll;
+                            break;
+                        }
+                        ll++;
+                        xp++;
+                    }
+                    //cursor_x = xp;
+                    //cursor_y++;
                     files[selected_file]->cursor_pos = ll;
-                    break;
-                }
-                ll--;
-            }
-            
-            if(!f) {
-                if(files[selected_file]->data[ll - 1] != '\n') {
-                    ll--;
-                }
-                size_t line_len = 0;
-                size_t sp_p = ll;
-                while(files[selected_file]->data[sp_p] != '\n' && sp_p > 0) {
-                    line_len++;
-                    sp_p--;
                 }
 
-                size_t xp = line_len - 1;
-                while(files[selected_file]->data[ll] != '\n' && xp != cursor_x) {
+                if(getcursorline(files[selected_file]) >= SCREEN_HEIGHT - 1) {
+                    // TODOOOOO
+                }
+
+                //move(cursor_y, cursor_x);
+                //refresh();
+                render_file(files[selected_file]);
+            }
+            else if(ip == KEY_UP) {
+                int32_t ll = files[selected_file]->cursor_pos - 1;
+                uint8_t f = 0;
+                while(files[selected_file]->data[ll] != '\n') {
                     if(ll < 0) {
                         ll = 0;
-                        //cursor_x = xp;
+                        f = 1;
+                        //cursor_x = 0;
+                        files[selected_file]->cursor_pos = ll;
                         break;
                     }
                     ll--;
-                    xp--;
                 }
-                //cursor_x = xp;
-                //cursor_y--;
-                files[selected_file]->cursor_pos = ll;
-            }
-            render_file(files[selected_file]);
-            //move(cursor_y, cursor_x);
-            //refresh();
-        }
-        else if(ip == KEY_BACKSP) {
-            if(files[selected_file]->cursor_pos > 0) {
-                for(int x = files[selected_file]->cursor_pos - 1; x < files[selected_file]->size - 2; x++) {
-                    files[selected_file]->data[x] = files[selected_file]->data[x + 1];
-                }
-                files[selected_file]->size--;
-                files[selected_file]->cursor_pos--;
-                render_file(files[selected_file]);
-            }
-        }
-        else if(ip == KEY_DEL) {
-            if(files[selected_file]->cursor_pos < files[selected_file]->size - 1) {
-                for(int x = files[selected_file]->cursor_pos; x < files[selected_file]->size - 2; x++) {
-                    files[selected_file]->data[x] = files[selected_file]->data[x + 1];
-                }
-                files[selected_file]->size--;
-                render_file(files[selected_file]);
-            }
-        }
-        else {
-            if(ip == KEY_RET) {
-                ip = '\n';
-            }
+                
+                
+                if(!f) {
+                    if(files[selected_file]->data[ll - 1] != '\n') {
+                        ll--;
+                    }
+                    size_t line_len = 0;
+                    int32_t sp_p = ll;
+                    while(files[selected_file]->data[sp_p] != '\n' && sp_p >= 0) {
+                        line_len++;
+                        sp_p--;
+                    }
 
-            if(files[selected_file]->allocated < files[selected_file]->size + 1) {
-                files[selected_file]->data = realloc(files[selected_file]->data, files[selected_file]->allocated + 64);
-                files[selected_file]->allocated += 64;
+                    int32_t xp = line_len - 1;
+                    while(files[selected_file]->data[ll] != '\n' && xp != cursor_x) {
+                        if(ll < 0) {
+                            ll = 0;
+                            //cursor_x = xp;
+                            break;
+                        }
+                        ll--;
+                        xp--;
+                    }
+                    //cursor_x = xp;
+                    //cursor_y--;
+                    files[selected_file]->cursor_pos = ll;
+                }
+                render_file(files[selected_file]);
+                //move(cursor_y, cursor_x);
+                //refresh();
             }
-            for(int x = files[selected_file]->size - 1; x > files[selected_file]->cursor_pos; x--) {
-                files[selected_file]->data[x] = files[selected_file]->data[x - 1];
+            else if(ip == KEY_BACKSP) {
+                if(files[selected_file]->cursor_pos > 0) {
+                    uint8_t clr = 0;
+                    if(files[selected_file]->data[files[selected_file]->cursor_pos - 1] == '\n') {
+                        clr = 1;
+                    }
+                    for(int x = files[selected_file]->cursor_pos - 1; x < files[selected_file]->size - 1; x++) {
+                        files[selected_file]->data[x] = files[selected_file]->data[x + 1];
+                        files[selected_file]->data[x + 1] = 0;
+                    }
+                    files[selected_file]->size--;
+                    files[selected_file]->cursor_pos--;
+                    move(getcursorline(files[selected_file]) + 1, 0);
+                    for(int x = 0; x < SCREEN_WIDTH - 1; x++) {
+                        printw(" ");
+                    }
+                    if(clr) {
+                        clear();
+                        render_tabsel();
+                    }
+                    render_file(files[selected_file]);
+                }
             }
-            files[selected_file]->data[files[selected_file]->cursor_pos] = (char)ip;
-            files[selected_file]->cursor_pos++;
-            render_file(files[selected_file]);
-            
+            else if(ip == KEY_DEL) {
+                if(files[selected_file]->cursor_pos < files[selected_file]->size - 1) {
+                    for(int x = files[selected_file]->cursor_pos; x < files[selected_file]->size - 2; x++) {
+                        files[selected_file]->data[x] = files[selected_file]->data[x + 1];
+                    }
+                    files[selected_file]->size--;
+                    move(getcursorline(files[selected_file]) + 1, 0);
+                    for(int x = 0; x < SCREEN_WIDTH - 1; x++) {
+                        printw(" ");
+                    }
+                    render_file(files[selected_file]);
+                }
+            }
+            else {
+
+                if(ip == KEY_RET) {
+                    ip = '\n';
+                }
+
+                if(files[selected_file]->allocated < files[selected_file]->size + 2) {
+                    files[selected_file]->data = realloc(files[selected_file]->data, files[selected_file]->allocated + 64);
+                    files[selected_file]->allocated += 64;
+                    memset(files[selected_file]->data + files[selected_file]->size, 0, 64);
+                }
+                for(int x = files[selected_file]->size - 1; x > files[selected_file]->cursor_pos; x--) {
+                    files[selected_file]->data[x] = files[selected_file]->data[x - 1];
+                }
+                files[selected_file]->data[files[selected_file]->cursor_pos] = (char)ip;
+                files[selected_file]->cursor_pos++;
+                files[selected_file]->size++;
+                render_file(files[selected_file]);
+                
+                
+            }
+        }
+        else if(mode == 1) {
+            attron(COLOR_PAIR(4));
+            if(ip == KEY_RET) {
+                command_parse(cbuf);
+                render_commandline();
+                memset(cbuf, 0, cbufp + 1);
+                cbufp = 0;
+                continue;
+            }
+            printw("%c", ip);
+            cbuf[cbufp] = ip;
+            cbufp++;
+            attroff(COLOR_PAIR(4));
         }
     }
 
@@ -254,8 +318,30 @@ struct gfile *gfile_open (char *path) {
     FILE *f = fopen(path, "r");
 
     if(f == NULL) {
+        for(int x = 0; x < MAX_FILES; x++) {
+            if(files[x] == NULL) {
+                struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
+                gg->path = path;
+                gg->size = 0;
+                gg->exists = 0;
+                gg->data = (char*)malloc(gg->size + 64);
+                gg->allocated = 64;
+                gg->cursor_pos = 0;
+                gg->screen_top = 0;
+                files[x] = gg;
+                selected_file = x;
 
-        return NULL;
+                clear();
+
+                render_tabsel();
+
+                refresh();
+
+                render_file(gg);
+
+                return gg;
+            }
+        }
     }
 
     fseek(f, 0L, SEEK_END);
@@ -267,6 +353,7 @@ struct gfile *gfile_open (char *path) {
             struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
             gg->path = path;
             gg->size = sz;
+            gg->exists = 1;
             gg->data = (char*)malloc(gg->size + 64);
             gg->allocated = sz + 64;
             gg->cursor_pos = 0;
@@ -308,6 +395,17 @@ void render_file (struct gfile *f) {
                 break;
             }
         }
+        if(f->data[x] == '\t') {
+            //uint16_t cx = getcurx(stdscr);
+            //uint16_t cy = getcury(stdscr);
+            //move(cy, cx + 4);
+            for(int g = 0; g < 4; g++) {
+                printw(" ", 0);
+            }
+            
+            x++;
+            continue;
+        }
         printw("%c", f->data[x]);
         x++;
     }
@@ -319,10 +417,51 @@ void render_file (struct gfile *f) {
             cursor_y++;
             continue;
         }
+        if(f->data[y] == '\t') {
+            cursor_x += 4;
+            continue;
+        }
         cursor_x++;
     }
 
     move(cursor_y, cursor_x);
 
     refresh();
+}
+
+void render_commandline () {
+    attron(COLOR_PAIR(4));
+    move(SCREEN_HEIGHT - 1, 0);
+    printw(">");
+    for(int x = 1; x < SCREEN_WIDTH - 1; x++) {
+        printw(" ");
+    }
+    attroff(COLOR_PAIR(4));
+    move(SCREEN_HEIGHT - 1, 1);
+    refresh();
+}
+
+uint8_t command_parse (char *c) {
+    char cb[1024] = { 0 };
+    uint16_t ix = 0;
+    while(c[ix] != 0 && c[ix] != ' ' && c[ix] != '\t') {
+        cb[ix] = c[ix];
+        ix++;
+    }
+    if(strcmp(cb, "save") == 0) {
+        FILE *ff = fopen(files[selected_file]->path, "w");
+        fwrite(files[selected_file]->data, 1, files[selected_file]->size - 1, ff);
+        fclose(ff);
+        return 1;
+    }
+    return 0;
+}
+
+uint16_t getcursorline (struct gfile *f) {
+    uint16_t l = 0;
+    for(int x = f->screen_top; x < f->cursor_pos; x++) {
+        if(f->data[x] == '\n')
+            l++;
+    }
+    return l;
 }

@@ -17,6 +17,9 @@ extern uint16_t cursor_y;
 
 struct gfile {
     FILE *file_pointer;
+    
+    uint8_t exists;
+
     char *path;
     char *data;
     size_t size;
@@ -33,7 +36,9 @@ extern int selected_file;
 struct gfile *gfile_open (char *path);
 
 void render_tabsel ();
-
+void render_commandline ();
+uint8_t command_parse (char *c);
+uint16_t getcursorline (struct gfile *f);
 void render_file (struct gfile *f);
 
 #endif
