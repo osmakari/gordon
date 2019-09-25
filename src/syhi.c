@@ -1,19 +1,11 @@
 #include "syhi.h"
 
 const struct syhi c_highlights[] = {
-    { "void",       SH_BLUE },
-    { "int",        SH_BLUE },
-    { "#include",   SH_MAGENTA },
-    { "#define",    SH_MAGENTA },
-    { "for",        SH_BLUE },
-    { "struct",     SH_BLUE },
-    { "uint8_t",    SH_BLUE },
-    { "uint16_t",   SH_BLUE },
-    { "uint32_t",   SH_BLUE },
-    { "int8_t",     SH_BLUE },
-    { "int16_t",    SH_BLUE },
-    { "int32_t",    SH_BLUE },
-    { "//",         SH_GREEN }
+    { "void", SH_BLUE }, { "int", SH_BLUE }, { "#include", SH_MAGENTA }, { "#define", SH_MAGENTA },
+    { "for", SH_BLUE }, { "struct", SH_BLUE }, { "int", SH_BLUE }, { "uint8_t", SH_BLUE },
+    { "uint16_t", SH_BLUE }, { "uint32_t", SH_BLUE }, { "int8_t", SH_BLUE }, { "int16_t", SH_BLUE }, 
+    { "int32_t", SH_BLUE }, { "//", SH_GREEN }, { "/*", SH_GREEN }, { "*/", SH_GREEN },
+    
 };
 
 uint8_t syhi_color_c (char *p) {

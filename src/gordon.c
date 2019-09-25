@@ -417,13 +417,15 @@ void render_file (struct gfile *f) {
 
         if(sh_state == 0) {
             sh_point = x;
-            while(f->data[sh_point] != '\n' && f->data[sh_point] != ' ' && f->data[sh_point] != '\t' && f->data[sh_point] != ',' && f->data[sh_point] != ';') {
+            
+            while(f->data[sh_point] != '\n' && f->data[sh_point] != ' ' && f->data[sh_point] != '\t' && f->data[sh_point] != ',' && f->data[sh_point] != ';' && sh_point < f->size) {
                 fbf[sh_buf_p++] = f->data[sh_point++];
             }
             at = syhi_color_c(fbf);
             if(at >= 10) {
                 attron(COLOR_PAIR(at));
             }
+            
             
             sh_state = 1;
         }
@@ -460,6 +462,9 @@ void render_file (struct gfile *f) {
         
         printw("%c", f->data[x]);
         x++;
+    }
+    if(at > 10) {
+        attroff(COLOR_PAIR(at));
     }
     cursor_x = 0;
     cursor_y = 1;
