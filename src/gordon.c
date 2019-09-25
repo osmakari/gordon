@@ -1,4 +1,5 @@
 #include "gordon.h"
+#include "syhi.h"
 
 #define KEY_CTRL_PAGEUP 563
 #define KEY_CTRL_PAGEDOWN 558
@@ -27,6 +28,12 @@ int main (int argc, char *argv[]) {
     init_pair(2, COLOR_BLACK, COLOR_CYAN);
     init_pair(3, COLOR_BLACK, COLOR_MAGENTA);
     init_pair(4, COLOR_BLACK, COLOR_WHITE);
+
+    // Syntax highlight COLORS
+    init_pair(SH_CYAN, COLOR_CYAN, COLOR_BLACK);
+    init_pair(SH_GREEN, COLOR_GREEN, COLOR_BLACK);
+    init_pair(SH_BLUE, COLOR_BLUE, COLOR_BLACK);
+    init_pair(SH_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
 
     getmaxyx(stdscr, SCREEN_HEIGHT, SCREEN_WIDTH);
     clear();
@@ -143,8 +150,14 @@ int main (int argc, char *argv[]) {
                     files[selected_file]->cursor_pos = ll;
                 }
 
-                if(getcursorline(files[selected_file]) >= SCREEN_HEIGHT - 1) {
-                    // TODOOOOO
+                if(getcursorline(files[selected_file]) > SCREEN_HEIGHT - 2) {
+                    int32_t lp = files[selected_file]->screen_top;
+                    while(files[selected_file]->data[files[selected_file]->screen_top] != '\n') {
+                        files[selected_file]->screen_top++;
+                    }
+                    files[selected_file]->screen_top++;
+                    clear();
+                    render_tabsel();
                 }
 
                 //move(cursor_y, cursor_x);
@@ -191,6 +204,17 @@ int main (int argc, char *argv[]) {
                     //cursor_y--;
                     files[selected_file]->cursor_pos = ll;
                 }
+
+                if(getcursorline(files[selected_file]) < 0) {
+                    files[selected_file]->screen_top = files[selected_file]->cursor_pos;
+                    while(files[selected_file]->data[files[selected_file]->screen_top] != '\n' && files[selected_file]->screen_top != 0) {
+                        files[selected_file]->screen_top--;
+                    }
+                    clear();
+                    render_tabsel();
+                    //files[selected_file]->screen_top++;
+                }
+
                 render_file(files[selected_file]);
                 //move(cursor_y, cursor_x);
                 //refresh();
@@ -224,10 +248,7 @@ int main (int argc, char *argv[]) {
                         files[selected_file]->data[x] = files[selected_file]->data[x + 1];
                     }
                     files[selected_file]->size--;
-                    move(getcursorline(files[selected_file]) + 1, 0);
-                    for(int x = 0; x < SCREEN_WIDTH - 1; x++) {
-                        printw(" ");
-                    }
+                    
                     render_file(files[selected_file]);
                 }
             }
@@ -322,7 +343,7 @@ struct gfile *gfile_open (char *path) {
             if(files[x] == NULL) {
                 struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
                 gg->path = path;
-                gg->size = 0;
+                gg->size = 1;
                 gg->exists = 0;
                 gg->data = (char*)malloc(gg->size + 64);
                 gg->allocated = 64;
@@ -385,9 +406,39 @@ void render_file (struct gfile *f) {
     move(1, 0);
     size_t x = f->screen_top;
     uint16_t rw = 0;
+    uint8_t sh_state = 0;
+    size_t sh_point = 0;
+    uint16_t sh_buf_p = 0;
+    char fbf[32] = { 0 };
+    uint8_t at = 0;
     while(x < f->size) {
         if(f->data[x] == 0)
             break;
+
+        if(sh_state == 0) {
+            sh_point = x;
+            while(f->data[sh_point] != '\n' && f->data[sh_point] != ' ' && f->data[sh_point] != '\t' && f->data[sh_point] != ',' && f->data[sh_point] != ';') {
+                fbf[sh_buf_p++] = f->data[sh_point++];
+            }
+            at = syhi_color_c(fbf);
+            if(at >= 10) {
+                attron(COLOR_PAIR(at));
+            }
+            
+            sh_state = 1;
+        }
+        
+        if(sh_state == 1) {
+            if(f->data[x] == '\n' || f->data[x] == ' ' || f->data[x] == '\t' || f->data[x] == ',' || f->data[x] == ';') {
+                if(at >= 10) {
+                    attroff(COLOR_PAIR(at));
+                }
+                sh_state = 0;
+                sh_buf_p = 0;
+                memset(fbf, 0, 32);
+                at = 0;
+            }
+        }
 
         if(f->data[x] == '\n') {
             rw++;
@@ -406,6 +457,7 @@ void render_file (struct gfile *f) {
             x++;
             continue;
         }
+        
         printw("%c", f->data[x]);
         x++;
     }
@@ -457,11 +509,21 @@ uint8_t command_parse (char *c) {
     return 0;
 }
 
-uint16_t getcursorline (struct gfile *f) {
-    uint16_t l = 0;
-    for(int x = f->screen_top; x < f->cursor_pos; x++) {
-        if(f->data[x] == '\n')
-            l++;
+int16_t getcursorline (struct gfile *f) {
+    int32_t l = 0;
+    int8_t dir = (f->screen_top > f->cursor_pos) ? -1 : 1;
+    if(dir == 1) {
+        for(int x = f->screen_top; x < f->cursor_pos; x++) {
+            if(f->data[x] == '\n')
+                l++;
+        }
     }
+    else {
+        for(int x = f->screen_top; x > f->cursor_pos; x--) {
+            if(f->data[x] == '\n')
+                l--;
+        }
+    }
+    
     return l;
 }

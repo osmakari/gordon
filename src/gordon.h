@@ -22,6 +22,7 @@ struct gfile {
 
     char *path;
     char *data;
+    
     size_t size;
     size_t allocated;
 
@@ -38,7 +39,7 @@ struct gfile *gfile_open (char *path);
 void render_tabsel ();
 void render_commandline ();
 uint8_t command_parse (char *c);
-uint16_t getcursorline (struct gfile *f);
+int16_t getcursorline (struct gfile *f);
 void render_file (struct gfile *f);
 
 #endif
