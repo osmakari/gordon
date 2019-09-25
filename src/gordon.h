@@ -35,6 +35,7 @@ extern struct gfile *files[MAX_FILES];
 extern int selected_file;
 
 struct gfile *gfile_open (char *path);
+struct gfile *gfile_open_empty ();
 
 void render_tabsel ();
 void render_commandline ();

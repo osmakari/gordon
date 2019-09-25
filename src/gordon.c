@@ -12,7 +12,7 @@ struct gfile *files[MAX_FILES] = { NULL };
 uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
 
-int selected_file = 0;
+int selected_file = -1;
 
 uint8_t mode = 0; // 0 = insert, 1 = command, 2 = buttondebug
 
@@ -34,6 +34,7 @@ int main (int argc, char *argv[]) {
     init_pair(SH_GREEN, COLOR_GREEN, COLOR_BLACK);
     init_pair(SH_BLUE, COLOR_BLUE, COLOR_BLACK);
     init_pair(SH_MAGENTA, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(SH_RED, COLOR_RED, COLOR_BLACK);
 
     getmaxyx(stdscr, SCREEN_HEIGHT, SCREEN_WIDTH);
     clear();
@@ -57,6 +58,10 @@ int main (int argc, char *argv[]) {
             }
         }
         
+    }
+
+    if(selected_file < 0) {
+        gfile_open_empty();
     }
 
     char cbuf[1024] = { 0 };
@@ -283,6 +288,18 @@ int main (int argc, char *argv[]) {
                 cbufp = 0;
                 continue;
             }
+            if(ip == KEY_BACKSP) {
+                cbufp--;
+                if(cbufp > 0) {
+                    cbuf[cbufp] = 0; 
+                }
+                move(SCREEN_HEIGHT - 1, cbufp + 1);
+                printw(" ");
+                move(SCREEN_HEIGHT - 1, cbufp + 1);
+                refresh();
+                continue;
+            }
+            
             printw("%c", ip);
             cbuf[cbufp] = ip;
             cbufp++;
@@ -321,7 +338,13 @@ void render_tabsel () {
         }
 
         move(0, offset);
-        printw("%s", files[x]->path);
+        if(strlen(files[x]->path) > 0) {
+            printw("%s", files[x]->path);
+
+        }
+        else {
+            printw("*new file*");
+        }
         offset += strlen(files[x]->path) + 1;
 
         if(x == selected_file) {
@@ -331,6 +354,34 @@ void render_tabsel () {
     }
     attroff(COLOR_PAIR(2));
     refresh();
+}
+
+struct gfile *gfile_open_empty () {
+    for(int x = 0; x < MAX_FILES; x++) {
+        if(files[x] == NULL) {
+            struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
+            gg->path = "";
+            gg->size = 1;
+            gg->exists = 0;
+            gg->data = (char*)malloc(gg->size + 64);
+            gg->allocated = 64;
+            gg->cursor_pos = 0;
+            gg->screen_top = 0;
+            files[x] = gg;
+            selected_file = x;
+
+            clear();
+
+            render_tabsel();
+
+            refresh();
+
+            render_file(gg);
+
+            return gg;
+        }
+    }
+    return NULL;
 }
 
 struct gfile *gfile_open (char *path) {
@@ -409,8 +460,11 @@ void render_file (struct gfile *f) {
     uint8_t sh_state = 0;
     size_t sh_point = 0;
     uint16_t sh_buf_p = 0;
-    char fbf[32] = { 0 };
+    char fbf[128] = { 0 };
     uint8_t at = 0;
+
+
+    uint16_t x_pos = 0;
     while(x < f->size) {
         if(f->data[x] == 0)
             break;
@@ -418,7 +472,7 @@ void render_file (struct gfile *f) {
         if(sh_state == 0) {
             sh_point = x;
             
-            while(f->data[sh_point] != '\n' && f->data[sh_point] != ' ' && f->data[sh_point] != '\t' && f->data[sh_point] != ',' && f->data[sh_point] != ';' && sh_point < f->size) {
+            while(f->data[sh_point] != '\n' && f->data[sh_point] != ' ' && f->data[sh_point] != '\t' && f->data[sh_point] != ',' && f->data[sh_point] != ';' && f->data[sh_point] != '(' && sh_point < f->size) {
                 fbf[sh_buf_p++] = f->data[sh_point++];
             }
             at = syhi_color_c(fbf);
@@ -431,19 +485,20 @@ void render_file (struct gfile *f) {
         }
         
         if(sh_state == 1) {
-            if(f->data[x] == '\n' || f->data[x] == ' ' || f->data[x] == '\t' || f->data[x] == ',' || f->data[x] == ';') {
+            if(f->data[x] == '\n' || f->data[x] == ' ' || f->data[x] == '\t' || f->data[x] == ',' || f->data[x] == ';' || f->data[x] == '(') {
                 if(at >= 10) {
                     attroff(COLOR_PAIR(at));
                 }
                 sh_state = 0;
                 sh_buf_p = 0;
-                memset(fbf, 0, 32);
+                memset(fbf, 0, 128);
                 at = 0;
             }
         }
 
         if(f->data[x] == '\n') {
             rw++;
+            x_pos = 0;
             if(rw >= SCREEN_HEIGHT - 1) {
                 break;
             }
@@ -459,8 +514,20 @@ void render_file (struct gfile *f) {
             x++;
             continue;
         }
-        
-        printw("%c", f->data[x]);
+        x_pos++;
+        if(x_pos < SCREEN_WIDTH - 2) {
+            printw("%c", f->data[x]);
+        }
+        else {
+            
+            if(x_pos == SCREEN_WIDTH - 2) {
+                move(getcury(stdscr), SCREEN_WIDTH - 2);
+                attron(COLOR_PAIR(SH_RED));
+                printw(">");
+                attroff(COLOR_PAIR(SH_RED));
+            }
+            
+        }
         x++;
     }
     if(at > 10) {
@@ -506,10 +573,33 @@ uint8_t command_parse (char *c) {
         ix++;
     }
     if(strcmp(cb, "save") == 0) {
+        if(strlen(files[selected_file]->path) == 0) {
+            // Cannot save file with empty name
+            return 2;
+        }
         FILE *ff = fopen(files[selected_file]->path, "w");
         fwrite(files[selected_file]->data, 1, files[selected_file]->size - 1, ff);
         fclose(ff);
         return 1;
+    }
+    if(strcmp(cb, "saveas") == 0) {
+        ix++;
+        memset(cb, 0, 1024);
+        uint16_t ib = 0;
+        while(c[ix] != 0 && c[ix] != ' ' && c[ix] != '\t') {
+            cb[ib] = c[ix];
+            ix++;
+            ib++;
+        }
+        if(strlen(cb) > 0) {
+            files[selected_file]->path = cb;
+            FILE *ff = fopen(files[selected_file]->path, "w");
+            fwrite(files[selected_file]->data, 1, files[selected_file]->size - 1, ff);
+            fclose(ff);
+            render_tabsel();
+            return 1;
+        }
+        return 2;
     }
     return 0;
 }

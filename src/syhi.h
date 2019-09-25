@@ -5,6 +5,7 @@
 #define SH_GREEN   11
 #define SH_BLUE    12
 #define SH_MAGENTA 13
+#define SH_RED     14
 
 #include <stdint.h>
 #include <stdio.h>
