@@ -3,10 +3,10 @@
 
 const struct syhi c_highlights[] = {
     { "void", SH_BLUE }, { "int", SH_BLUE }, { "float", SH_MAGENTA }, { "#include", SH_MAGENTA }, { "#define", SH_MAGENTA },
-    { "for", SH_MAGENTA }, { "if", SH_MAGENTA }, { "return", SH_MAGENTA }, { "break", SH_MAGENTA }, { "continue", SH_MAGENTA },
+    { "for", SH_MAGENTA }, { "while", SH_MAGENTA }, { "if", SH_MAGENTA }, { "else", SH_MAGENTA }, { "return", SH_MAGENTA }, { "break", SH_MAGENTA }, { "continue", SH_MAGENTA },
     { "struct", SH_BLUE }, { "int", SH_BLUE }, { "uint8_t", SH_BLUE },
     { "uint16_t", SH_BLUE }, { "uint32_t", SH_BLUE }, { "int8_t", SH_BLUE }, { "int16_t", SH_BLUE }, 
-    { "int32_t", SH_BLUE }, { "//", SH_GREEN }, { "/*", SH_GREEN }, { "*/", SH_GREEN }
+    { "int32_t", SH_BLUE }, { "//", SH_GREEN, 1 }, { "/*", SH_GREEN }, { "*/", SH_GREEN }
 
 };
 

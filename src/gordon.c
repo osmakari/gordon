@@ -472,9 +472,24 @@ void render_file (struct gfile *f) {
 
 
     uint16_t x_pos = 0;
+
+    uint8_t x_offset = 0;
+
+    size_t xxx = f->cursor_pos;
+    uint16_t llen = 0;
+    while(xxx > 0 && f->data[xxx] != '\n') {
+        llen++;
+        xxx--;
+    }
+
+    if(llen > SCREEN_WIDTH - 2) {
+        x_offset = llen - (SCREEN_WIDTH - 2);
+    }
+
     while(x < f->size) {
         if(f->data[x] == 0)
             break;
+
 
         if(sh_state == 0) {
             sh_point = x;
@@ -506,9 +521,17 @@ void render_file (struct gfile *f) {
         if(f->data[x] == '\n') {
             rw++;
             x_pos = 0;
+            printw("\n");
+            x++;
             if(rw >= SCREEN_HEIGHT - 1) {
                 break;
             }
+            continue;
+        }
+        x_pos++;
+        if(x_pos < x_offset) {
+            x++;
+            continue;
         }
         if(f->data[x] == '\t') {
             //uint16_t cx = getcurx(stdscr);
@@ -521,8 +544,9 @@ void render_file (struct gfile *f) {
             x++;
             continue;
         }
-        x_pos++;
-        if(x_pos < SCREEN_WIDTH - 2) {
+        
+        
+        if(x_pos - x_offset < SCREEN_WIDTH - 2) {
             //addch((const chtype)f->data[x]);
             printw("%c", f->data[x]);
         }
@@ -555,6 +579,7 @@ void render_file (struct gfile *f) {
         }
         cursor_x++;
     }
+    cursor_x -= x_offset;
 
     move(cursor_y, cursor_x);
 

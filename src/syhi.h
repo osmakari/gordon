@@ -14,6 +14,7 @@
 struct syhi {
     const char *syntax;
     uint8_t highlight;
+    uint8_t until; // 0 = this word, 1 = until newline, 2 = whole line
 };
 
 extern const struct syhi c_highlights[];
