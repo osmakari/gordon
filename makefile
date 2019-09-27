@@ -1,5 +1,5 @@
 bin/gordon: src/*.c src/*.h bin
-	gcc src/*.c -lncurses -o bin/gordon
+	gcc src/*.c -lncursesw -o bin/gordon
 
 bin:
 	mkdir bin

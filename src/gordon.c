@@ -1,5 +1,6 @@
 #include "gordon.h"
 #include "syhi.h"
+#include <locale.h>
 
 #define KEY_CTRL_PAGEUP 563
 #define KEY_CTRL_PAGEDOWN 558
@@ -17,6 +18,8 @@ int selected_file = -1;
 uint8_t mode = 0; // 0 = insert, 1 = command, 2 = buttondebug
 
 int main (int argc, char *argv[]) {
+
+    setlocale(LC_ALL, "");
     initscr();
     cbreak();
     noecho();
@@ -40,6 +43,8 @@ int main (int argc, char *argv[]) {
     clear();
 
     refresh();
+
+    
 
     render_tabsel();
     uint8_t swi = 0;
@@ -289,14 +294,16 @@ int main (int argc, char *argv[]) {
                 continue;
             }
             if(ip == KEY_BACKSP) {
-                cbufp--;
+                
                 if(cbufp > 0) {
+                    cbufp--;
                     cbuf[cbufp] = 0; 
+                    move(SCREEN_HEIGHT - 1, cbufp + 1);
+                    printw(" ");
+                    move(SCREEN_HEIGHT - 1, cbufp + 1);
+                    refresh();
                 }
-                move(SCREEN_HEIGHT - 1, cbufp + 1);
-                printw(" ");
-                move(SCREEN_HEIGHT - 1, cbufp + 1);
-                refresh();
+                
                 continue;
             }
             
@@ -516,6 +523,7 @@ void render_file (struct gfile *f) {
         }
         x_pos++;
         if(x_pos < SCREEN_WIDTH - 2) {
+            //addch((const chtype)f->data[x]);
             printw("%c", f->data[x]);
         }
         else {
