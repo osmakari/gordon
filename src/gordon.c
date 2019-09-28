@@ -7,6 +7,8 @@
 #define KEY_BACKSP 127
 #define KEY_DEL 330
 #define KEY_RET 13
+#define KEY_PAGEDOWN 338
+#define KEY_PAGEUP 339
 
 struct gfile *files[MAX_FILES] = { NULL };
 
@@ -18,7 +20,7 @@ int selected_file = -1;
 uint8_t mode = 0; // 0 = insert, 1 = command, 2 = buttondebug
 
 int main (int argc, char *argv[]) {
-
+    
     setlocale(LC_ALL, "");
     initscr();
     cbreak();
@@ -229,6 +231,21 @@ int main (int argc, char *argv[]) {
                 //move(cursor_y, cursor_x);
                 //refresh();
             }
+            else if(ip == KEY_PAGEDOWN) {
+                uint32_t lc = 0;
+                while(files[selected_file]->cursor_pos < files[selected_file]->size && files[selected_file]->data[files[selected_file]->cursor_pos] != 0) {
+                    if(files[selected_file]->data[files[selected_file]->cursor_pos] == '\n') {
+                        lc++;
+                        if(lc == SCREEN_HEIGHT - 1) {
+                            files[selected_file]->cursor_pos++;
+                            break;
+                        }
+
+                    }
+                    files[selected_file]->cursor_pos++;
+                }
+                render_file(files[selected_file]);
+            }
             else if(ip == KEY_BACKSP) {
                 if(files[selected_file]->cursor_pos > 0) {
                     uint8_t clr = 0;
@@ -400,7 +417,8 @@ struct gfile *gfile_open (char *path) {
         for(int x = 0; x < MAX_FILES; x++) {
             if(files[x] == NULL) {
                 struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
-                gg->path = path;
+                gg->path = (char*)malloc(strlen(path) + 1);
+                memcpy(gg->path, path, strlen(path) + 1);
                 gg->size = 1;
                 gg->exists = 0;
                 gg->data = (char*)malloc(gg->size + 64);
@@ -430,7 +448,8 @@ struct gfile *gfile_open (char *path) {
     for(int x = 0; x < MAX_FILES; x++) {
         if(files[x] == NULL) {
             struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
-            gg->path = path;
+            gg->path = (char*)malloc(strlen(path) + 1);
+            memcpy(gg->path, path, strlen(path) + 1);
             gg->size = sz;
             gg->exists = 1;
             gg->data = (char*)malloc(gg->size + 64);
@@ -471,11 +490,13 @@ void render_file (struct gfile *f) {
     uint8_t at = 0;
 
 
-    uint16_t x_pos = 0;
+    int x_pos = 0;
 
     uint8_t x_offset = 0;
 
-    size_t xxx = f->cursor_pos;
+    size_t xxx = f->cursor_pos - 1;
+    if(f->cursor_pos == 0)
+        xxx = 0;
     uint16_t llen = 0;
     while(xxx > 0 && f->data[xxx] != '\n') {
         llen++;
@@ -529,7 +550,7 @@ void render_file (struct gfile *f) {
             continue;
         }
         x_pos++;
-        if(x_pos < x_offset) {
+        if(x_pos < x_offset + 1) {
             x++;
             continue;
         }
@@ -546,13 +567,13 @@ void render_file (struct gfile *f) {
         }
         
         
-        if(x_pos - x_offset < SCREEN_WIDTH - 2) {
+        if(x_pos - x_offset - 1 < SCREEN_WIDTH - 2) {
             //addch((const chtype)f->data[x]);
             printw("%c", f->data[x]);
         }
         else {
             
-            if(x_pos == SCREEN_WIDTH - 2) {
+            if(x_pos - x_offset - 1 == SCREEN_WIDTH - 2) {
                 move(getcury(stdscr), SCREEN_WIDTH - 2);
                 attron(COLOR_PAIR(SH_RED));
                 printw(">");
@@ -630,6 +651,21 @@ uint8_t command_parse (char *c) {
             fwrite(files[selected_file]->data, 1, files[selected_file]->size - 1, ff);
             fclose(ff);
             render_tabsel();
+            return 1;
+        }
+        return 2;
+    }
+    if(strcmp(cb, "open") == 0) {
+        ix++;
+        memset(cb, 0, 1024);
+        uint16_t ib = 0;
+        while(c[ix] != 0 && c[ix] != ' ' && c[ix] != '\t') {
+            cb[ib] = c[ix];
+            ix++;
+            ib++;
+        }
+        if(strlen(cb) > 0) {
+            gfile_open(cb);
             return 1;
         }
         return 2;
