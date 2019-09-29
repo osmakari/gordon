@@ -9,6 +9,8 @@
 
 #define MAX_FILES 16
 
+#define MAX_COMMANDS 64
+
 uint16_t SCREEN_WIDTH;
 uint16_t SCREEN_HEIGHT;
 
@@ -30,6 +32,14 @@ struct gfile {
     size_t screen_top;
 };
 
+struct command {
+    char *name;
+    void (*func)(int argc, char *argv[]);
+    char *description;
+};
+
+struct command *commands[MAX_COMMANDS];
+
 extern struct gfile *files[MAX_FILES];
 
 extern int selected_file;
@@ -40,7 +50,7 @@ struct gfile *gfile_open_empty ();
 void render_tabsel ();
 void render_commandline ();
 uint8_t command_parse (char *c);
-int16_t getcursorline (struct gfile *f);
+int getscreenline (struct gfile *f);
 void render_file (struct gfile *f);
 
 #endif

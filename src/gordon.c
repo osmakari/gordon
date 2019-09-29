@@ -162,7 +162,7 @@ int main (int argc, char *argv[]) {
                     files[selected_file]->cursor_pos = ll;
                 }
 
-                if(getcursorline(files[selected_file]) > SCREEN_HEIGHT - 2) {
+                if(getscreenline(files[selected_file]) > SCREEN_HEIGHT - 2) {
                     int32_t lp = files[selected_file]->screen_top;
                     while(files[selected_file]->data[files[selected_file]->screen_top] != '\n') {
                         files[selected_file]->screen_top++;
@@ -217,7 +217,7 @@ int main (int argc, char *argv[]) {
                     files[selected_file]->cursor_pos = ll;
                 }
 
-                if(getcursorline(files[selected_file]) < 0) {
+                if(getscreenline(files[selected_file]) < 0) {
                     files[selected_file]->screen_top = files[selected_file]->cursor_pos;
                     while(files[selected_file]->data[files[selected_file]->screen_top] != '\n' && files[selected_file]->screen_top != 0) {
                         files[selected_file]->screen_top--;
@@ -244,6 +244,41 @@ int main (int argc, char *argv[]) {
                     }
                     files[selected_file]->cursor_pos++;
                 }
+                int cl = getscreenline(files[selected_file]);
+                if(cl > SCREEN_HEIGHT - 2) {
+                    
+                    int lg = cl - (SCREEN_HEIGHT - 3);
+                    while(lg > 0) {
+                        if(files[selected_file]->data[files[selected_file]->screen_top] == '\n') {
+                            lg--;
+                        }
+                        files[selected_file]->screen_top++;
+                    }
+                }
+                render_file(files[selected_file]);
+            }
+            else if(ip == KEY_PAGEUP) {
+                uint32_t lc = 0;
+                while(files[selected_file]->cursor_pos > 0 && files[selected_file]->data[files[selected_file]->cursor_pos] != 0) {
+                    if(files[selected_file]->data[files[selected_file]->cursor_pos] == '\n') {
+                        lc++;
+                        if(lc == SCREEN_HEIGHT - 1) {
+                            files[selected_file]->cursor_pos--;
+                            break;
+                        }
+
+                    }
+                    files[selected_file]->cursor_pos--;
+                }
+                    
+                files[selected_file]->screen_top = files[selected_file]->cursor_pos;
+                int lg = files[selected_file]->screen_top;
+                while(files[selected_file]->screen_top > 0) {
+                    if(files[selected_file]->data[files[selected_file]->screen_top] == '\n') {
+                        break;    
+                    }
+                    files[selected_file]->screen_top--;
+                }
                 render_file(files[selected_file]);
             }
             else if(ip == KEY_BACKSP) {
@@ -258,7 +293,7 @@ int main (int argc, char *argv[]) {
                     }
                     files[selected_file]->size--;
                     files[selected_file]->cursor_pos--;
-                    move(getcursorline(files[selected_file]) + 1, 0);
+                    move(getscreenline(files[selected_file]) + 1, 0);
                     for(int x = 0; x < SCREEN_WIDTH - 1; x++) {
                         printw(" ");
                     }
@@ -673,7 +708,7 @@ uint8_t command_parse (char *c) {
     return 0;
 }
 
-int16_t getcursorline (struct gfile *f) {
+int getscreenline (struct gfile *f) {
     int32_t l = 0;
     int8_t dir = (f->screen_top > f->cursor_pos) ? -1 : 1;
     if(dir == 1) {
