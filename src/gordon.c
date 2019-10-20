@@ -11,6 +11,7 @@
 #define KEY_RET 13
 #define KEY_PAGEDOWN 338
 #define KEY_PAGEUP 339
+#define KEY_CTRL_O 15
 
 
 void int_handler (int signal);
@@ -344,6 +345,9 @@ int main (int argc, char *argv[]) {
                     
                     render_file(files[selected_file]);
                 }
+            }
+            else if(ip == KEY_CTRL_O) {
+                
             }
             else {
 
