@@ -9,8 +9,6 @@
 
 #define MAX_FILES 16
 
-#define MAX_COMMANDS 64
-
 uint16_t SCREEN_WIDTH;
 uint16_t SCREEN_HEIGHT;
 
@@ -31,14 +29,6 @@ struct gfile {
     size_t cursor_pos;
     size_t screen_top;
 };
-
-struct command {
-    char *name;
-    void (*func)(int argc, char *argv[]);
-    char *description;
-};
-
-struct command *commands[MAX_COMMANDS];
 
 extern struct gfile *files[MAX_FILES];
 
