@@ -3,3 +3,6 @@ bin/gordon: src/*.c src/*.h bin
 
 bin:
 	mkdir bin
+
+install:
+	cp bin/gordon /bin/gordon

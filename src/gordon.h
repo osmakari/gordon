@@ -22,6 +22,8 @@ struct gfile {
 
     char *path;
     char *data;
+
+    char extension[8];
     
     size_t size;
     size_t allocated;

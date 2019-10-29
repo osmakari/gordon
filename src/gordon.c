@@ -27,13 +27,13 @@ uint8_t mode = 0; // 0 = insert, 1 = command, 2 = buttondebug
 
 int main (int argc, char *argv[]) {
     
+    setlocale(LC_ALL, "");
     init_commands();
 
     // signal(SIGINT, int_handler);
 
     set_escdelay(25);
 
-    setlocale(LC_ALL, "");
     initscr();
     cbreak();
     noecho();
@@ -283,14 +283,18 @@ int main (int argc, char *argv[]) {
                             }
                             files[selected_file]->screen_top++;
                         }
+                        clear();
+                        refresh();
+                        render_tabsel();
                     }
+                    
                     render_file(files[selected_file]);
                 }
             }
             else if(ip == KEY_PAGEUP) {
                 if(files[selected_file]->size > 0) {
                     uint32_t lc = 0;
-                    while(files[selected_file]->cursor_pos > 0 && files[selected_file]->data[files[selected_file]->cursor_pos] != 0) {
+                    while(files[selected_file]->cursor_pos > 0) {
                         if(files[selected_file]->data[files[selected_file]->cursor_pos] == '\n') {
                             lc++;
                             if(lc == SCREEN_HEIGHT - 1) {
@@ -520,6 +524,7 @@ struct gfile *gfile_open (char *path) {
             struct gfile *gg = (struct gfile*)malloc(sizeof(struct gfile));
             gg->path = (char*)malloc(strlen(path) + 1);
             memcpy(gg->path, path, strlen(path) + 1);
+            memset(gg->extension, 0, 8);
             gg->size = sz;
             gg->exists = 1;
             gg->data = (char*)malloc(gg->size + 64);

@@ -1,4 +1,5 @@
 #include "syhi.h"
+#include "gordon.h"
 
 
 const struct syhi c_highlights[] = {
@@ -16,6 +17,13 @@ uint8_t syhi_color_c (char *p) {
 
             return c_highlights[x].highlight;
         }
+    }
+    return 1;
+}
+
+uint8_t syhi_color (char *p) {
+    if(strcmp(files[selected_file]->extension, ".c") == 0) {
+        return syhi_color_c(p);
     }
     return 1;
 }
